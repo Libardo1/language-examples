@@ -9,7 +9,7 @@ def hexdump(f)
   offset = 0
   while (buf = f.read(16)) do
     bytes = buf.unpack 'C*'
-    lines << "%08X :%-48s |%-16s|" % [ 
+    lines << "%08X:%-48s |%-16s|" % [ 
                  offset, 
                  bytes.map { |b| " %02X" % b },
                  bytes.map { |b| b.chr =~ /[[:print:]]/ ? b.chr : '.' }.join('') 
