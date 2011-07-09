@@ -1,1 +1,14 @@
 			Programming Language Examples
+
+Inspired by the experience of using Skiena's "Programming Challenges" book to
+learn new languages.
+
+The same program will be implemented in multiple languages (e.g. Ruby, Python,
+Javascript, Haskell, Go) in a (hopefully) idiomatic fashion in order to 
+highlight differences between the languages.
+
+Note that while an effort has been made to use idiomatic code, the emphasis
+has been on writing *reusable* code, not one-liners or other obfuscated
+nonsense.
+
+*Disclaimer* Not intended for public consumption.
