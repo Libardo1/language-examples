@@ -1,17 +1,39 @@
 #!/usr/bin/env ruby
-# Entropy takes two parameters: block size, and elem size. Every possible
-# value of elem in block is given a probability and an entropy.
-# TODO: custom probability?
-# e.g. address probability, ascii probability.
+# Calculate the 'byte entropy' for blocks in a file.
+# This differs from the standard byte entropy algorithm in that it generates
+# an entropy value for multibyte strings. Each block is considered a
+# collection of byte strings. The byte strings are powers of 2 from 1 to
+# (block size / 8).
+# Thus, for a block size of 256, the following values are calculated:
+#   1, 2, 4, 8, 16, 32
+# This can be used to detect the regularity of multibyte strings, for example
+# memory addresses.
 
-# note: endianness shouldn't really matter as this is a differential calc
+=begin rdoc
+Namespace for byte entropy methods
+=end
 module ByteEntropy
+
+=begin rdoc
+Hard-coded block size. In an application, this would be controlled by a
+config option.
+=end
   BLOCK_SIZE = 1024
 
+=begin rdoc
+Return logarithm of 'num' to base 'base'. Allows base to vary, which is
+important when using multiple element sizes.
+=end
   def self.log_n(base, num)
 	  Math.log(num) / Math.log(base)
   end
 
+=begin rdoc
+Return an array of all distinct elements in buf. This just partitions buf into
+elem_size-sized Strings.
+
+Note that endianness is not a concern as this is a differential calculation.
+=end
   def self.buf_elements(buf, elem_size)
     elems = []
     idx = 0 
@@ -23,6 +45,13 @@ module ByteEntropy
     elems
   end
 
+=begin rdoc
+Return the entropy of buf for elem_size. An elem_size of 1 returns the byte
+entropy; larger sizes are 'multibyte entropy'.
+
+NOTE: this can be improved by varying the offset at which the buffer is 
+split into elements.
+=end
   def self.entropy_elem(buf, elem_size)
     ent = 0.0
     base = 256 * elem_size                # of all possible combinations
@@ -43,13 +72,21 @@ module ByteEntropy
     ent
   end
 
+=begin rdoc
+Return the entropy stats of a buffer for all statistically significant element 
+sizes. The return value is a Hash where the key is the element size, and the
+value is the entropy for that element size.
+
+Note that an element size which is too close to the size of 'buf' will not
+be statistically significant. The top powers of two are invariant:
+   BLOCK_SIZE     = 0.0
+   BLOCK_SIZE / 2 = 0.06666667
+   BLOCK_SIZE / 4 = 0.14285714
+Therefore, the largest element size is BLOCK_SIZE / 8.
+=end
   def self.buf_entropy(buf)
-    # NOTE: larger elem sizes are not statistically significant
-    #        BLOCK_SIZE     = 0.0
-    #        BLOCK_SIZE / 2 = 0.06666667
-    #        BLOCK_SIZE / 4 = 0.14285714
-    max_elem = BLOCK_SIZE / 8
-    max_elem = buf.length if max_elem > buf.length
+    max_elem = BLOCK_SIZE < buf.length ? BLOCK_SIZE : buf.length
+    max_elem /= 8
 
     ent = {}
     i = 1
@@ -61,7 +98,8 @@ module ByteEntropy
   end
 
 =begin rdoc
-Given a file handle, return ...
+Given a file handle, return an array of entropy stats for each block in the 
+file.
 =end
   def self.entropy(f)
     ent = []
