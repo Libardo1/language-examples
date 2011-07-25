@@ -10,23 +10,29 @@
 # memory addresses.
 
 =begin rdoc
-Namespace for byte entropy methods
+Namespace for methods that operate on binary objects or Strings of raw bytes.
 =end
-module ByteEntropy
+module BinaryObject
+
+=begin rdoc
+Inner namespace for methods that support entropy() and buf_entropy() 
+methods.
+=end
+  module ByteEntropy
 
 =begin rdoc
 Hard-coded block size. In an application, this would be controlled by a
 config option.
 =end
-  BLOCK_SIZE = 1024
+    BLOCK_SIZE = 1024
 
 =begin rdoc
 Return logarithm of 'num' to base 'base'. Allows base to vary, which is
 important when using multiple element sizes.
 =end
-  def self.log_n(base, num)
-	  Math.log(num) / Math.log(base)
-  end
+    def self.log_n(base, num)
+      Math.log(num) / Math.log(base)
+    end
 
 =begin rdoc
 Return an array of all distinct elements in buf. This just partitions buf into
@@ -34,16 +40,16 @@ elem_size-sized Strings.
 
 Note that endianness is not a concern as this is a differential calculation.
 =end
-  def self.buf_elements(buf, elem_size)
-    elems = []
-    idx = 0 
-    max_idx = buf.length
-    while idx < max_idx
-      elems << buf[idx,elem_size].unpack('C*').join('')
-      idx += elem_size
+    def self.buf_elements(buf, elem_size)
+      elems = []
+      idx = 0 
+      max_idx = buf.length
+      while idx < max_idx
+        elems << buf[idx,elem_size].unpack('C*').join('')
+        idx += elem_size
+      end
+      elems
     end
-    elems
-  end
 
 =begin rdoc
 Return the entropy of buf for elem_size. An elem_size of 1 returns the byte
@@ -52,24 +58,25 @@ entropy; larger sizes are 'multibyte entropy'.
 NOTE: this can be improved by varying the offset at which the buffer is 
 split into elements.
 =end
-  def self.entropy_elem(buf, elem_size)
-    ent = 0.0
-    base = 256 * elem_size                # of all possible combinations
-    elems = buf_elements(buf, elem_size)
-    total = elems.count.to_f
+    def self.entropy_elem(buf, elem_size)
+      ent = 0.0
+      base = 256 * elem_size                # of all possible combinations
+      elems = buf_elements(buf, elem_size)
+      total = elems.count.to_f
 
-    counters = {}
-    elems.each do |b|
-      counters[b] ||= 0
-      counters[b] += 1.0
+      counters = {}
+      elems.each do |b|
+        counters[b] ||= 0
+        counters[b] += 1.0
+      end
+
+      counters.each do |byte, count|
+        p_x = count / total
+        ent -= (p_x * log_n(base, p_x)) if p_x != 0
+      end
+
+      ent
     end
-
-    counters.each do |byte, count|
-      p_x = count / total
-      ent -= (p_x * log_n(base, p_x)) if p_x != 0
-    end
-
-    ent
   end
 
 =begin rdoc
@@ -85,13 +92,14 @@ be statistically significant. The top powers of two are invariant:
 Therefore, the largest element size is BLOCK_SIZE / 8.
 =end
   def self.buf_entropy(buf)
-    max_elem = BLOCK_SIZE < buf.length ? BLOCK_SIZE : buf.length
+    max_elem = ByteEntropy::BLOCK_SIZE < buf.length ? 
+                                         ByteEntropy::BLOCK_SIZE : buf.length
     max_elem /= 8
 
     ent = {}
     i = 1
     while i <= max_elem
-      ent[i] = entropy_elem(buf, i)
+      ent[i] = ByteEntropy.entropy_elem(buf, i)
       i *= 2
     end
     ent
@@ -103,7 +111,7 @@ file.
 =end
   def self.entropy(f)
     ent = []
-    while (buf = f.read(BLOCK_SIZE)) do
+    while (buf = f.read(ByteEntropy::BLOCK_SIZE)) do
       ent << buf_entropy(buf)
     end
     ent
@@ -112,9 +120,10 @@ file.
 end
 
 if __FILE__ == $0
-  ByteEntropy.entropy(ARGF).each_with_index do |h, idx|
+  BinaryObject.entropy(ARGF).each_with_index do |h, idx|
     ent_arr = []
     h.keys.sort.each { |k| ent_arr << "%d: %0.8f" % [k, h[k]] }
-    puts "%08X: %s" % [idx * ByteEntropy::BLOCK_SIZE, ent_arr.join(', ') ]
+    puts "%08X: %s" % [idx * BinaryObject::ByteEntropy::BLOCK_SIZE, 
+                       ent_arr.join(', ') ]
   end
 end
