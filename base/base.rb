@@ -23,11 +23,11 @@ the need for a generic version.
   def self.convert(num, base)
     chars = []
     while num > 0
-      chars << TR[num % base]
+      chars.unshift TR[num % base]
       num = (num/base).floor
     end
 
-    (chars.empty?) ? '0': chars.reverse.join('')
+    (chars.empty?) ? '0': chars.join('')
   end
 end
 
