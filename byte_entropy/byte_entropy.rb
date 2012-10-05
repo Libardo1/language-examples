@@ -88,25 +88,17 @@ than 'num'. 63 -> 32. 64 -> 64. 127 -> 64. And so forth.
   end
 
 =begin rdoc
-Return the entropy stats of a buffer for all statistically significant element 
-sizes. The return value is a Hash where the key is the element size, and the
-value is the entropy for that element size.
-
-Note that an element size which is too close to the size of 'buf' will not
-be statistically significant. The top powers of two are invariant:
-   BLOCK_SIZE     = 0.0
-   BLOCK_SIZE / 2 = 0.06666667
-   BLOCK_SIZE / 4 = 0.14285714
-Therefore, the largest element size is BLOCK_SIZE / 8.
+Return the entropy stats of a buffer for all power-of-two element sizes. The
+return value is a Hash where the key is the element size, and the value is the 
+entropy for that element size.
 =end
   def self.buf_entropy(buf, block_size=ByteEntropy::BLOCK_SIZE)
     max_elem = block_size < buf.length ? block_size : prev_power_2(buf.length)
-    #max_elem /= 8
 
     ent = {}
     i = 1
-    while i <= max_elem
-      ent[i] = ByteEntropy.entropy_elem(buf, i)
+    while i <= block_size
+      ent[i] = i < max_elem ? ByteEntropy.entropy_elem(buf, i) : 0
       i *= 2
     end
     ent

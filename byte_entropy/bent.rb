@@ -15,6 +15,8 @@ module ByteEntropyApp
   def self.get_options(args)
     options = OpenStruct.new
     options.offset = 0
+    options.json = nil
+    options.delim = nil
     options.range = nil
     options.intervals = false
     options.max_block_size = nil
@@ -25,9 +27,10 @@ module ByteEntropyApp
       opts.on('-a', '--all-intervals', 'Calc entropy from 1 to block_size') { 
         options.intervals = true
       }
-      opts.on('-M', '--min int', 'Min block size [default: 1]') { |n| 
-        options.min_block_size = Integer(n)
+      opts.on('-d', '--delim char', 'Output in delimited format') { |c| 
+        options.delim = c
       }
+      opts.on('-j', '--json', 'Serialize to JSON') { options.json = true }
       opts.on('-m', '--max int', 'Max block size [default: file size]') { |n| 
         options.max_block_size = Integer(n)
       }
@@ -63,18 +66,14 @@ module ByteEntropyApp
     range = opts.range ? (opts.offset + opts.range) : -1
     f = StringIO.new(buf[opts.offset..range])
 
-    # TODO: less than f.size? this gets triangular at some point. pow/2 ?
     sz = opts.max_block_size
-    sz ||= f.size
-    #sz ||= log2(f.size)
+    #sz ||= (2 ** ((Math.log(f.size)/Math.log(2)).floor / 2))     # log2(f.size)
+    sz ||= 2 ** (Math.log(f.size)/Math.log(2)).floor
 
-    if opts.intervals
-      h = {}
-      sz.times { |off| h[off] = calc_interval_entropy(f, sz, off) }
-      h
-    else
-      calc_interval_entropy(f, sz, 0)
-    end
+    h = {}
+    num_ivl = opts.intervals ? sz : 1
+    num_ivl.times { |off| h[off] = calc_interval_entropy(f, sz, off) }
+    h
   end
 
   def self.print_entropy_stats(arr)
@@ -89,15 +88,11 @@ module ByteEntropyApp
     end
   end
 
-  def self.print_entropy_interval(h)
-    h.keys.sort.each do |iv|
-      puts "INTERVAL #{iv} =================================================="
-      print_entropy_stats h[iv]
-    end
-  end
-
   def self.print_entropy(ent)
-    (ent.kind_of? Hash) ? print_entropy_interval(ent) : print_entropy_stats(ent)
+    ent.keys.sort.each do |iv|
+      puts "INTERVAL #{iv} =================================================="
+      print_entropy_stats ent[iv]
+    end
   end
 
 =begin
