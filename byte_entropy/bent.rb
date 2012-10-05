@@ -17,7 +17,6 @@ module ByteEntropyApp
     options.offset = 0
     options.range = nil
     options.intervals = false
-    options.min_block_size = 1
     options.max_block_size = nil
 
     opts = OptionParser.new do |opts|
@@ -31,9 +30,6 @@ module ByteEntropyApp
       }
       opts.on('-m', '--max int', 'Max block size [default: file size]') { |n| 
         options.max_block_size = Integer(n)
-      }
-      opts.on('-n', '--num int', 'Number of bytes [default: to EOF]') { |n| 
-        options.length = Integer(n)
       }
       opts.on('-o', '--offset int', 'Offset in file [default: 0]') { |n| 
         options.offset = Integer(n)
@@ -68,43 +64,42 @@ module ByteEntropyApp
     f = StringIO.new(buf[opts.offset..range])
 
     # TODO: less than f.size? this gets triangular at some point. pow/2 ?
-    opts.max_block_size = f.size
-    #opts.max_block_size ||= log2(f.size)
-    #block_sizes = (opts.min_block_size..opts.max_block_size).map { |x| 2 ** x }
-    block_sizes = [opts.max_block_size]
+    sz = opts.max_block_size
+    sz ||= f.size
+    #sz ||= log2(f.size)
 
-    h = {}
-    block_sizes.each do |blk|
-      if opts.intervals
-        h[blk] = []
-        blk.times { |off| h[blk][off] = calc_interval_entropy(f, blk, off) }
-      else
-        h[blk] =  calc_interval_entropy(f, blk, 0)
-      end
+    if opts.intervals
+      h = {}
+      sz.times { |off| h[off] = calc_interval_entropy(f, sz, off) }
+      h
+    else
+      calc_interval_entropy(f, sz, 0)
     end
-    h
+  end
+
+  def self.print_entropy_stats(arr)
+    arr.each_with_index do |h, idx|
+      ent_arr = []
+      h.keys.sort.each { |k| ent_arr << "%d: %0.8f" % [k, h[k]] }
+      # TODO: collect stats
+      #Array.number,sum,mean,median,variance,standard_deviation, percentile(70)
+      puts "%d: %s" % [idx, ent_arr.join(', ') ]
+      # TODO: how to specify block
+      #puts "%08X: %s" % [idx * blk, ent_arr.join(', ') ]
+    end
+  end
+
+  def self.print_entropy_interval(h)
+    h.keys.sort.each do |iv|
+      puts "INTERVAL #{iv} =================================================="
+      print_entropy_stats h[iv]
+    end
   end
 
   def self.print_entropy(ent)
-    # for each block size
-    ent.each do |blk, coll|
-      puts "BLOCK SIZE #{blk} ========================================="
-      if coll.kind_of? Hash
-        # print intervals
-      else
-        coll.each_with_index do |h, idx|
-          ent_arr = []
-          h.keys.sort.each { |k| ent_arr << "%d: %0.8f" % [k, h[k]] }
-#Array.number,sum,mean,median,variance,standard_deviation, percentile(70)
-          # TODO: collect stats
-          puts "%08X: %s" % [idx * blk, ent_arr.join(', ') ]
-        end
-        # TODO print stats, collect stats
+    (ent.kind_of? Hash) ? print_entropy_interval(ent) : print_entropy_stats(ent)
+  end
 
-      end
-
-      # TODO: calc stats
-    end
 =begin
 puts '-----------------------------------------------------------------'
 puts "BLOCK SIZE #{sz} OFFSET #{offset}"
@@ -116,7 +111,6 @@ ent.each_with_index do |h, idx|
             #                   ent_arr.join(', ') ]
           end
 =end
-  end
 end
 
 if __FILE__ == $0

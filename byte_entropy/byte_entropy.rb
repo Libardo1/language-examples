@@ -100,9 +100,8 @@ be statistically significant. The top powers of two are invariant:
 Therefore, the largest element size is BLOCK_SIZE / 8.
 =end
   def self.buf_entropy(buf, block_size=ByteEntropy::BLOCK_SIZE)
-    max_elem = prev_power_2(block_size < buf.length ? block_size : buf.length)
-
-    max_elem /= 8
+    max_elem = block_size < buf.length ? block_size : prev_power_2(buf.length)
+    #max_elem /= 8
 
     ent = {}
     i = 1
