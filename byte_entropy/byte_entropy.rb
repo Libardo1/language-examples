@@ -80,6 +80,14 @@ split into elements.
   end
 
 =begin rdoc
+Previous power of 2. This returns the closest power of 2 equal to or less
+than 'num'. 63 -> 32. 64 -> 64. 127 -> 64. And so forth.
+=end
+  def self.prev_power_2(num)
+    2 ** (Math.log(num)/Math.log(2)).floor
+  end
+
+=begin rdoc
 Return the entropy stats of a buffer for all statistically significant element 
 sizes. The return value is a Hash where the key is the element size, and the
 value is the entropy for that element size.
@@ -91,9 +99,9 @@ be statistically significant. The top powers of two are invariant:
    BLOCK_SIZE / 4 = 0.14285714
 Therefore, the largest element size is BLOCK_SIZE / 8.
 =end
-  def self.buf_entropy(buf)
-    max_elem = ByteEntropy::BLOCK_SIZE < buf.length ? 
-                                         ByteEntropy::BLOCK_SIZE : buf.length
+  def self.buf_entropy(buf, block_size=ByteEntropy::BLOCK_SIZE)
+    max_elem = prev_power_2(block_size < buf.length ? block_size : buf.length)
+
     max_elem /= 8
 
     ent = {}
@@ -109,10 +117,11 @@ Therefore, the largest element size is BLOCK_SIZE / 8.
 Given a file handle, return an array of entropy stats for each block in the 
 file.
 =end
-  def self.entropy(f)
+  def self.entropy(f, block_size=ByteEntropy::BLOCK_SIZE, offset=0)
     ent = []
-    while (buf = f.read(ByteEntropy::BLOCK_SIZE)) do
-      ent << buf_entropy(buf)
+    f.seek(offset) if offset > 0
+    while (buf = f.read(block_size)) do
+      ent << buf_entropy(buf, block_size)
     end
     ent
   end
