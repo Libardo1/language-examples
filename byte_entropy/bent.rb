@@ -31,7 +31,7 @@ module ByteEntropyApp
         options.delim = c
       }
       opts.on('-j', '--json', 'Serialize to JSON') { options.json = true }
-      opts.on('-m', '--max int', 'Max block size [default: file size]') { |n| 
+      opts.on('-m', '--max int', 'Max block size [0 = file size]') { |n| 
         options.max_block_size = Integer(n)
       }
       opts.on('-o', '--offset int', 'Offset in file [default: 0]') { |n| 
@@ -44,8 +44,29 @@ module ByteEntropyApp
     options
   end
 
-  def self.log2(num)
-    (Math.log(num) / Math.log(2)).floor
+  def self.calc_block_size(f, opts)
+    sz = opts.max_block_size
+    sz ||= 2 ** (Math.log(f.size)/Math.log(2)).floor
+    sz == 0 ? d.size : sz
+  end
+
+  def self.calc_interval_entropy(f, bs, interval)
+    ent = ByteEntropy.entropy(f, bs, interval)
+    f.rewind
+    ent
+  end
+
+  def self.calc_entropy(buf, opts)
+    range = opts.range ? (opts.offset + opts.range) : -1
+    f = StringIO.new(buf[opts.offset..range])
+
+    sz = calc_block_size(f, opts)
+
+    h = {}
+    # TODO: print warning if num_ivl > 64
+    num_ivl = opts.intervals ? sz : 1
+    num_ivl.times { |off| h[off] = calc_interval_entropy(f, sz, off) }
+    h
   end
 
   #def self.gen_entropy_stats(h)
@@ -55,26 +76,6 @@ module ByteEntropyApp
 #ent.each_with_index do |h, idx|
 #            #h.keys.sort.each { |k| ent_arr << "%d: %0.8f" % [k, h[k]] }
   #end
-
-  def self.calc_interval_entropy(f, bs, interval)
-    ent = BinaryObject.entropy(f, bs, interval)
-    f.rewind
-    ent
-  end
-
-  def self.calc_entropy(buf, opts)
-    range = opts.range ? (opts.offset + opts.range) : -1
-    f = StringIO.new(buf[opts.offset..range])
-
-    sz = opts.max_block_size
-    #sz ||= (2 ** ((Math.log(f.size)/Math.log(2)).floor / 2))     # log2(f.size)
-    sz ||= 2 ** (Math.log(f.size)/Math.log(2)).floor
-
-    h = {}
-    num_ivl = opts.intervals ? sz : 1
-    num_ivl.times { |off| h[off] = calc_interval_entropy(f, sz, off) }
-    h
-  end
 
   def self.print_entropy_stats(arr)
     arr.each_with_index do |h, idx|
