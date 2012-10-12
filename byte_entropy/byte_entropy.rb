@@ -85,15 +85,10 @@ return value is a Hash where the key is the element size, and the value is the
 entropy for that element size.
 =end
   def self.buf_entropy(buf, block_size=ByteEntropy::BLOCK_SIZE)
-    #max_elem = prev_power_2(block_size < buf.length ? block_size : buf.length)
-    #max_elem /= 2
-    #max_elem = 1 if max_elem < 1
-
     ent = {}
     i = 1
-    while i <= block_size
+    while i < block_size  # entropy of block_size will always be 0
       ent[i] = ByteEntropy.entropy_elem(buf, i)
-      #ent[i] = i < max_elem ? ByteEntropy.entropy_elem(buf, i) : 0
       i *= 2
     end
     ent

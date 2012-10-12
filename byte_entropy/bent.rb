@@ -10,7 +10,17 @@ require 'descriptive_statistics'
 # Graph: different block entropy based on offset
 #        min, max entropy per block-size in file [error-bar]
 
+# TODO: extract per-interval calc to byte-entropy
 module ByteEntropyApp
+
+  class EntropyInfo < Hash
+    def initialize
+      super()
+
+      # TODO: each interval
+    end
+    # add interval
+  end
 
   def self.get_options(args)
     options = OpenStruct.new
@@ -56,6 +66,7 @@ module ByteEntropyApp
     ent
   end
 
+  # extract to byte_entropy!
   def self.calc_entropy(buf, opts)
     range = opts.range ? (opts.offset + opts.range) : -1
     f = StringIO.new(buf[opts.offset..range])
@@ -63,8 +74,8 @@ module ByteEntropyApp
     sz = calc_block_size(f, opts)
 
     h = {}
-    # TODO: print warning if num_ivl > 64
     num_ivl = opts.intervals ? sz : 1
+    $stderr.puts "WARNING: -a is slow when block_size > 32" if num_ivl > 32
     num_ivl.times { |off| h[off] = calc_interval_entropy(f, sz, off) }
     h
   end
