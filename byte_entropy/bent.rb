@@ -60,24 +60,16 @@ module ByteEntropyApp
     sz == 0 ? d.size : sz
   end
 
-  def self.calc_interval_entropy(f, bs, interval)
-    ent = ByteEntropy.entropy(f, bs, interval)
-    f.rewind
-    ent
-  end
-
-  # extract to byte_entropy!
   def self.calc_entropy(buf, opts)
     range = opts.range ? (opts.offset + opts.range) : -1
     f = StringIO.new(buf[opts.offset..range])
 
     sz = calc_block_size(f, opts)
 
-    h = {}
     num_ivl = opts.intervals ? sz : 1
     $stderr.puts "WARNING: -a is slow when block_size > 32" if num_ivl > 32
-    num_ivl.times { |off| h[off] = calc_interval_entropy(f, sz, off) }
-    h
+
+    ByteEntropy.interval_entropy(f, bs, num_ivl)
   end
 
   #def self.gen_entropy_stats(h)

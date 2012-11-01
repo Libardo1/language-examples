@@ -107,6 +107,18 @@ file.
     ent
   end
 
+  def self.calc_interval_entropy(f, bs, interval)
+    ent = entropy(f, bs, interval)
+    f.rewind
+    ent
+  end
+
+  def self.interval_entropy(f, bs, num_intervals=1)
+    h = {}
+    num_intervals.times { |off| h[off] = calc_interval_entropy(f, bs, off) }
+    h
+  end
+
 end
 
 # ----------------------------------------------------------------------
